@@ -1,7 +1,8 @@
 # HTTP_server_client_c-
 
 使用常规的网络编程函数写了个简单的Server端和Client端，用到的网络编程函数有：
-socket函数
+
+（1）socket函数
 int socket(int protofamily, int type, int protocol) //返回的是sockfd，socket()用于创建sock描述符，唯一表示这个socket。
 ` protofamily：协议域，常用的有AF_INET(ipv4)，AF_INET6(ipv6)，AF_LOCAL（或称AF_UNIX，Unix域socket）、AF_ROUTE等等。协议域决定了socket的地址类型，在通信中必须采用对应的地址。如AF_INET必须使用ipv4地址（32位）和端口号（16位）的组合，AF_UNIX决定了要用一个决定路径作为地址。
 ` type: 指定Socket的类型，常用类型有SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, SOCK_PACKET, SOCK_SEQPACK等等。
@@ -9,7 +10,7 @@ int socket(int protofamily, int type, int protocol) //返回的是sockfd，socke
 
 注意：当调用socket函数时，是创建了一个没有具体地址的Socket。如果要给地址赋值，则必须要使用bind函数去分配一个端口。否则当调用listen和connect的时候系统会自动分配窗口。
 
-bind函数
+（2）bind函数
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen); //将一串地址赋给sockfd对应的socket
 ` sockfd: socket描述符， 通过socket()创建，唯一标识了socket。
 ` *addr：一个const struct sockaddr 的指针，指向要绑定给该sockfd的地址，该地址根据创建socket时协议的不同而改变。
@@ -64,7 +65,7 @@ Unix域（AF_LOCAL）
 
 注意：在将一个地址绑定到socket的时候，请先将主机字节序转换成网络字节序，而不要假定主机字节序和网络字节序一样都是大端模式。务必！bind的时候要将主机字节序转换为网络字节序。
 
-listen(),connet()函数
+（3）listen(),connet()函数
 作为一个服务器，在调用socket()，bind()之后会调用listen()来监听这个Socket，如果这个客户端这时调用connect()发出连接请求，服务端就会收到这个请求。
 int listen(int sockfd, int backlog);
 int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen);
@@ -73,7 +74,7 @@ listen()函数中，第一个参数为要监听的socket描述符，第二个参
 connect()函数的第一个参数为客户端的socket对象的fd，第二个参数为准备请求的服务器的socket地址，第三个参数为socket地址的长度。注：客户端通过connect函数来建立与服务器的TCP连接。连接成功则返回0，失败返回-1
 
 
-accept()函数
+（4）accept()函数
 1. 服务器端以此执行了socket(), bind(), listen()之后，就会监听指定的socket地址。
 2. 客户端依次调用socket()，connect()之后就向服务器发送连接请求。
 3. 服务端监听到客户端的请求后，会调用accept()接收请求，这样连接就建立好了。之后就可以开始网络I/O操作，类同于普通文件的I/O操作。
@@ -84,7 +85,7 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen); //返回连�
 一个服务器通常只创建一个监听socket套接字，在服务器的生命周期中一直存在。同时内核为每一个连接的客户进程提供了已连接Socket的文件描述符，当服务器完成对某个客户的服务时，会关闭这个已连接的Socket，包括其socket的fd。
 
 
-read(), write()函数
+（5）recv()/send()函数
 网络的IO操作主要有以下几组：
 ` read()/write()
 ` recv()/send()
@@ -116,7 +117,7 @@ read(), write()函数
 
 
 
-close函数
+（6）close函数
 在服务端和客户端建立连接之后，会进行一些读写操作，读写结束后需要关闭相应的已连接套接字。
 int close(int fd);
 注意：close操作只是使相应的Socket描述字的引用计数-1，只有当引用计数为0的时候，才会触发客户端向服务器发送终止连接的请求。
