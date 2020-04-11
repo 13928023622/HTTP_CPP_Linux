@@ -1,0 +1,9 @@
+*.o
+*.a
+*.gch
+test
+log.txt
+gz_ag_ipcamera_operator
+.vscode
+3rdparty/rapidjson
+localImg
