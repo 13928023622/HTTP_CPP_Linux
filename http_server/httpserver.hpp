@@ -3,6 +3,7 @@
 
 /* Normal */
 #include <string>
+#include <opencv2/opencv.hpp>
 
 namespace myHttpServer{
 
@@ -68,6 +69,7 @@ namespace myHttpServer{
         int parseHeader(const char* recvMessage, int pos);
         void parseContent(const char* recvMessage);
         void upload_image(const char* content);
+        void base64ToImage(const std::string &b64_str, cv::Mat &result_img);
 
         int lenth(const char *pstr);
         int count(const char *p1,const char *p2);

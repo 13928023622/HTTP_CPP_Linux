@@ -15,7 +15,8 @@
 
 /*3rd party library*/
 #include "3rdparty/nlohmann/json.hpp"
-#include "3rdparty/littlstar/b64.h"
+// #include "3rdparty/littlstar/b64.h"
+#include "base64.h"
 #include <opencv2/opencv.hpp>
 
 myHttpServer::HttpServer::HttpServer()
@@ -293,26 +294,23 @@ void myHttpServer::HttpServer::parseContent(const char* recvMessage){
     }
 }
 
+void myHttpServer::HttpServer::base64ToImage(const std::string &b64_str, cv::Mat &result_img)
+{
+    std::string base64_dec_str = base64_decode(b64_str);
+    std::vector<uchar>data(base64_dec_str.begin(),base64_dec_str.end());
+    result_img = cv::imdecode(data, CV_LOAD_IMAGE_COLOR);
+}
+
+
 void myHttpServer::HttpServer::upload_image(const char* content)
 {
     nlohmann::json j = nlohmann::json::parse(content);  
-    
+        
     //Extract base64 type of img from json
     std::string b64_img1 = j["0_img_base64"]; 
-    std:: cout<< b64_img1 <<std::endl;
-    /*
-        B64 3rd party lib
-        param1: const char *
-        param2: size
-    */     
-    std::string s((char*)(b64_decode(b64_img1.c_str(), b64_img1.size())));
-    std::vector<uchar>data(s.begin(), s.end());
-    cv::Mat result_img = cv::imdecode(data, CV_LOAD_IMAGE_COLOR);
-
-    cv::imwrite("./UploadImg/1.jpg",result_img);
-    /*
-        还要return数据回去
-    */
+    cv::Mat res_img;
+    base64ToImage(b64_img1, res_img);
+    cv::imwrite("./UploadImg/1.jpg",res_img);
     return ;
     
 }

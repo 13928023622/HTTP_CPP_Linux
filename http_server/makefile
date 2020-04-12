@@ -1,6 +1,6 @@
 TARGET = server
 FLAG = -Wall -std=c++11
-
+BASE64 = base64
 
 OPENCV_VERSION = 3
 
@@ -13,15 +13,19 @@ OPENCV2_HEADER = -I/usr/include/opencv2
 
 
 
-include 3rdparty/littlstar/b64.make
-$(TARGET): $(TARGET).o httpserver.o
-	g++ -o $(TARGET) $(TARGET).o httpserver.o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) $(B64_LIB)
+
+$(TARGET): $(TARGET).o httpserver.o $(BASE64).o
+	g++ -o $(TARGET) $(TARGET).o httpserver.o  $(BASE64).o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
 
 $(TARGET).o:$(TARGET).cpp 
-	g++ -c $(TARGET).cpp  $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) $(B64_LIB)
+	g++ -c $(TARGET).cpp  $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
 
 httpserver.o:httpserver.cpp
-	g++ -c httpserver.cpp $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) $(B64_LIB)
+	g++ -c httpserver.cpp $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
+
+$(BASE64).o: $(BASE64).cpp
+	g++ -c $(BASE64).cpp $(FLAG)
+
 
 clean:
 	rm *.o
