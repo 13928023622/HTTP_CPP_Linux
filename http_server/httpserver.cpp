@@ -34,8 +34,11 @@ myHttpServer::HttpServer::~HttpServer(){
 }
 
 void myHttpServer::HttpServer::close_socket(){
-    close(this->clifd);
-    close(this->socket_fd);
+    if(this -> isInit)
+    {
+        std::cout<< TAG_INFO << "Close server" << std::endl;
+        close(this->socket_fd);
+    }
 }
 
 int myHttpServer::HttpServer::HttpInit()
@@ -87,14 +90,15 @@ int myHttpServer::HttpServer::sock_accept(const unsigned int lisfd)
     socklen_t size = sizeof(struct sockaddr);
     memset((char *)&clientAddr, 0, sizeof(struct sockaddr));
 
-    int iRet_clifd = accept(lisfd, &clientAddr, &size);
+    int iRet_connetct_fd = accept(lisfd, &clientAddr, &size);
     // int iRet_clifd = accept(this->socket_fd, &clientAddr, &size);
-    if (iRet_clifd == -1)
+    if (iRet_connetct_fd == -1)
     {
         std::cerr << TAG_ERROR << "ERROR ID:" << errno << ", MSG: " << strerror(errno) << std::endl;
         return errno;
     }
-    return iRet_clifd;
+    this->isConByCli = true;
+    return iRet_connetct_fd;
 }
 
 void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
@@ -142,7 +146,7 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                 char last_recv_buffer[last_buffer_size]={0};
                 for (int i = 2; i <= total_times; i++)
                 {
-                    if(i == 11) 
+                    if(i == total_times) 
                     {
                         
                         recv(this->clifd, last_recv_buffer, last_buffer_size, 0);
@@ -155,7 +159,7 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                 }                                
             }
             strncpy(this->content, temp_content,MULTI_ADD_TO_CONTENT);            
-
+            free(temp_content);
             // std::cout<< "Content:\r\n" << this->content <<std::endl;
             SetTask(this->router, this->content);
         }            
@@ -176,11 +180,19 @@ inline void myHttpServer::HttpServer::SetTask(const char* router, const char* co
         if(strcmp(router , "/upload_image")==0)
         {
             upload_image(content);
-            if(strcmp(this->connection, "Close")==0 || strcmp(this->connection, "close")==0) close(this->clifd);
+            if(strcmp(this->connection, "Close")==0 || strcmp(this->connection, "close")==0) 
+            {
+                std::cout << TAG_INFO << "Close client socketfd:" << this->clifd <<std::endl;
+                close(this->clifd);
+            }
         }
         else
         {
             std::cerr << TAG_ERROR << "The request router isn't exit!" <<std::endl;
+            nlohmann::json return_j;
+            return_j["status_code"]  = THE_PAGE_IS_NOT_FOUND; 
+            return_j["message"]  = "'The request router isn't found!'";
+            retData(return_j.dump());
         }
     }
     else if(strcmp(this->requestMethod,"GET")==0)
@@ -190,6 +202,9 @@ inline void myHttpServer::HttpServer::SetTask(const char* router, const char* co
     else
     {
         std::cerr << TAG_ERROR << "Unkown request!" <<std::endl;
+        /*
+            return to client
+        */
         return ;
     }
     return ;    
@@ -304,18 +319,83 @@ void myHttpServer::HttpServer::base64ToImage(const std::string &b64_str, cv::Mat
 
 void myHttpServer::HttpServer::upload_image(const char* content)
 {
-    nlohmann::json j = nlohmann::json::parse(content);  
-        
-    //Extract base64 type of img from json
-    std::string b64_img1 = j["0_img_base64"]; 
-    cv::Mat res_img;
-    base64ToImage(b64_img1, res_img);
-    cv::imwrite("./UploadImg/1.jpg",res_img);
+    std::cout << content << std::endl;
+    //Create return json object
+    nlohmann::json return_j;
+    if(strlen(content)==0)
+    {
+        return_j["status_code"]  = JSON_DATA_IS_NULL; 
+        return_j["message"]  = "'Json data is null.'";
+        retData(return_j.dump());
+        return ;
+    }
+
+    //Get the request json object
+    nlohmann::json request_j = nlohmann::json::parse(content);  
+    int nums = request_j["img_num"];
+    if(nums <= 0)
+    {            
+        return_j["status_code"]  = IMG_NUM_IS_ZERO; 
+        return_j["message"]  = "'Argument \'img_num\' of Json date is zero.'";
+        retData(return_j.dump());
+        return ;
+    }
+
+    for (int i = 0; i < nums; i++)
+    {
+        //transfer base64 to img mat
+        char tmp_img_name[MINIMUM_SIZE]={0};
+        sprintf(tmp_img_name, "%d_img_base64", i);
+        std::string b64_img = request_j[tmp_img_name];
+        cv::Mat res_img;
+        base64ToImage(b64_img, res_img);
+
+        //save img mat
+        char uuid[37]={0};
+        char uuid_name[MINIMUM_SIZE*4] = {0};
+        sprintf(uuid_name, "./UploadImg/%s.jpg", random_uuid(uuid));
+        cv::imwrite(uuid_name,res_img);
+    }
+    
+    return_j["status_code"] = 200; 
+    return_j["message"] = "Upload Success!";
+    std::cout<< "SIZE:" << return_j.dump().size() << std::endl;;
+    std::cout << return_j.dump().c_str() << std::endl;
+    
+    retData(return_j.dump());
+
+
     return ;
     
 }
 
 
+inline void myHttpServer::HttpServer::retData(std::string return_data_dump)
+{
+    if(return_data_dump.size() == 0){
+        return ;
+    }
+    const char* header_template = 
+        // Request Line
+        "HTTP/1.1 200 OK\r\n" 
+        "Server: HttpServer 1.0\r\n"
+        "Connection: Close\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: %lu\r\n"
+        "\r\n"
+        "%s";
+    char header[NORMAL_BUFFER_SIZE] = {0};
+    sprintf(header,header_template, return_data_dump.size(), return_data_dump.c_str());
+    
+    int send_size = send(this->clifd, header, NORMAL_BUFFER_SIZE,0);
+    if(send_size < 0){
+        std::cerr << TAG_ERROR << "Send size:" << send_size << std::endl;
+    }
+}
+
+
+
+// tool
 int myHttpServer::HttpServer::count(const char *p1,const char *p2)
 {
 	int count=0;
@@ -350,4 +430,46 @@ int myHttpServer::HttpServer::lenth(const char *pstr)
 		len++;
 	}
 	return len;
+}
+
+
+/**
+ * Create random UUID
+ *
+ * param buf - buffer to be filled with the uuid string
+ */
+
+char* myHttpServer::HttpServer::random_uuid(char buf[37])
+{
+    const char *c = "89ab";
+    char *p = buf;
+    int n;
+    for( n = 0; n < 16; ++n )
+    {
+        int b = rand()%255;
+        switch( n )
+        {
+            case 6:
+                sprintf(p, "4%x", b%15 );
+                break;
+            case 8:
+                sprintf(p, "%c%x", c[rand()%strlen(c)], b%15 );
+                break;
+            default:
+                sprintf(p, "%02x", b);
+            break;
+        }
+        p += 2;
+        switch( n )
+        {
+            case 3:
+            case 5:
+            case 7:
+            case 9:
+                *p++ = '-';
+                break;
+        }
+    }
+    *p = 0;
+    return buf;
 }
