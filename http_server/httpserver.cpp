@@ -142,20 +142,22 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                 int total_times = (this->content_length / CONTENT_RECV_BUFFER_SIZE) + ((this->content_length  % CONTENT_RECV_BUFFER_SIZE > 0) ? 1 : 0);
                 recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
                 strcat(temp_content, tmp_content_buffer);
-                size_t last_buffer_size = (this->content_length  % CONTENT_RECV_BUFFER_SIZE);
-                char last_recv_buffer[last_buffer_size]={0};
+                char last_recv_buffer[(this->content_length  % CONTENT_RECV_BUFFER_SIZE)]={0};
+                size_t recv_size ;
                 for (int i = 2; i <= total_times; i++)
                 {
                     if(i == total_times) 
                     {
                         
-                        recv(this->clifd, last_recv_buffer, last_buffer_size, 0);
+                        recv_size = recv(this->clifd, last_recv_buffer, (this->content_length  % CONTENT_RECV_BUFFER_SIZE), 0);
                         strcat(temp_content, last_recv_buffer);
                     }else
                     {
-                        recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
+                        recv_size = recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
                         strcat(temp_content, tmp_content_buffer);
-                    }                    
+                    }    
+                    std::cout << TAG_INFO << "Current / Total: " << i + 1 << " / " << total_times 
+                        << ", Recv Size: " << recv_size << " Byte(s)." << std::endl;                
                 }                                
             }
             strncpy(this->content, temp_content,MULTI_ADD_TO_CONTENT);            
@@ -178,7 +180,8 @@ inline void myHttpServer::HttpServer::SetTask(const char* router, const char* co
     if(strcmp(this->requestMethod, "POST") == 0)
     {
         if(strcmp(router , "/upload_image")==0)
-        {
+        {            
+            std::cout << TAG_INFO<< "Call function:" << router << std::endl;
             upload_image(content);
             if(strcmp(this->connection, "Close")==0 || strcmp(this->connection, "close")==0) 
             {
@@ -319,7 +322,6 @@ void myHttpServer::HttpServer::base64ToImage(const std::string &b64_str, cv::Mat
 
 void myHttpServer::HttpServer::upload_image(const char* content)
 {
-    std::cout << content << std::endl;
     //Create return json object
     nlohmann::json return_j;
     if(strlen(content)==0)
