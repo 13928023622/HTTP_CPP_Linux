@@ -59,7 +59,8 @@ int main(int argc, char* argv[])
         // std::cout << "current image: " << img_file << std::endl;
         // Mat img =_getOneImg(cap);
         std::vector<cv::Mat> mat_buffer/* = gz_ag::_getSeveralImg(cap, 5)*/;
-        for (int i = 0; i < 5; i++){
+        int imgs_size = sub_image_names.size();
+        for (int i = 0; i < imgs_size; i++){
             cv::Mat img_temp = cv::imread(sub_image_names[i]);
             mat_buffer.push_back(img_temp);
         }

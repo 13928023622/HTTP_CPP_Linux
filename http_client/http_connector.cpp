@@ -13,6 +13,7 @@
 /* 3rd party library */
 #include "3rdparty/nlohmann/json.hpp"
 #include "3rdparty/littlstar/b64.h"
+#include "base64.h"
 
 gz_ag::HttpConnector::HttpConnector()
 {
@@ -516,19 +517,16 @@ void gz_ag::HttpConnector::imageToBase64(const cv::Mat& img, std::string& encode
     std::cout << "[INFO] size of image: " << img.size() /*img.cols*img.rows*img.channels()*/ << std::endl;
     cv::imencode(img_type, img, vecImg, vecCompression_params);
     encode_str = b64_encode(vecImg.data(), vecImg.size());
-
+    std::cout << vecImg.data() << std::endl;
     return;
 }
 
 
 void gz_ag::HttpConnector::base64ToImage(const std::string &b64_str, cv::Mat &result_img)
 {
-    unsigned char* b64_c = b64_decode(b64_str.c_str(), b64_str.size());
-    std::cout<< b64_c <<std::endl;
-    std::string s((char*)(b64_c));
-    std::vector<uchar>data(s.begin(), s.end());
+    std::string base64_dec_str = base64_decode(b64_str);
+    std::vector<uchar>data(base64_dec_str.begin(),base64_dec_str.end());
     result_img = cv::imdecode(data, CV_LOAD_IMAGE_COLOR);
-
 }
 
 
