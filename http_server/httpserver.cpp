@@ -138,31 +138,30 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
             if(content_length <= CONTENT_RECV_BUFFER_SIZE){
                 recv(this->clifd, temp_content, HEADER_RECV_BUFFER_SIZE, 0);
             }else
-            {
+            {                
                 int total_times = (this->content_length / CONTENT_RECV_BUFFER_SIZE) + ((this->content_length  % CONTENT_RECV_BUFFER_SIZE > 0) ? 1 : 0);
-                recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
-                strcat(temp_content, tmp_content_buffer);
-                char last_recv_buffer[(this->content_length  % CONTENT_RECV_BUFFER_SIZE)]={0};
-                size_t recv_size ;
-                for (int i = 2; i <= total_times; i++)
+
+                for (int i = 1; i <= total_times; i++)
                 {
+                    int recv_size;
                     if(i == total_times) 
                     {
-                        
-                        recv_size = recv(this->clifd, last_recv_buffer, (this->content_length  % CONTENT_RECV_BUFFER_SIZE), 0);
+                        size_t last_buffer_size = (this->content_length  % CONTENT_RECV_BUFFER_SIZE);
+                        char last_recv_buffer[last_buffer_size]={0};
+                        recv_size = recv(this->clifd, last_recv_buffer, last_buffer_size, 0);
                         strcat(temp_content, last_recv_buffer);
                     }else
                     {
                         recv_size = recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
                         strcat(temp_content, tmp_content_buffer);
-                    }    
-                    std::cout << TAG_INFO << "Current / Total: " << i + 1 << " / " << total_times 
-                        << ", Recv Size: " << recv_size << " Byte(s)." << std::endl;                
-                }                                
+                    }          
+                    std::cout << TAG_INFO << "Current / Total: " << i << " / " << total_times 
+                        << ", Recv Size: " << recv_size << " Byte(s)." << std::endl;                 
+                }                                       
             }
-            strncpy(this->content, temp_content,MULTI_ADD_TO_CONTENT);            
+            strncpy(this->content, temp_content,MULTI_ADD_TO_CONTENT); 
+            std::cout << this ->content << std::endl;           
             free(temp_content);
-            // std::cout<< "Content:\r\n" << this->content <<std::endl;
             SetTask(this->router, this->content);
         }            
         // std::cout<< recv_buffer <<std::endl;
@@ -181,7 +180,7 @@ inline void myHttpServer::HttpServer::SetTask(const char* router, const char* co
     {
         if(strcmp(router , "/upload_image")==0)
         {            
-            std::cout << TAG_INFO<< "Call function:" << router << std::endl;
+            std::cout << TAG_INFO<< "Request router:" << router << std::endl;
             upload_image(content);
             if(strcmp(this->connection, "Close")==0 || strcmp(this->connection, "close")==0) 
             {
@@ -204,11 +203,12 @@ inline void myHttpServer::HttpServer::SetTask(const char* router, const char* co
     }
     else
     {
-        std::cerr << TAG_ERROR << "Unkown request!" <<std::endl;
-        /*
-            return to client
-        */
-        return ;
+        std::cerr << TAG_ERROR << "Unkown request method!" <<std::endl;
+        nlohmann::json return_j;
+        return_j["status_code"]  = THE_PAGE_IS_NOT_FOUND; 
+        return_j["message"]  = "'Unkown request method!'";
+        retData(return_j.dump());
+        
     }
     return ;    
 }
@@ -339,6 +339,7 @@ void myHttpServer::HttpServer::upload_image(const char* content)
     {            
         return_j["status_code"]  = IMG_NUM_IS_ZERO; 
         return_j["message"]  = "'Argument \'img_num\' of Json date is zero.'";
+        std:: cout << TAG_ERROR << return_j["message"] <<std::endl;
         retData(return_j.dump());
         return ;
     }
@@ -361,8 +362,8 @@ void myHttpServer::HttpServer::upload_image(const char* content)
     
     return_j["status_code"] = 200; 
     return_j["message"] = "Upload Success!";
-    std::cout<< "SIZE:" << return_j.dump().size() << std::endl;;
-    std::cout << return_j.dump().c_str() << std::endl;
+    std::cout<< TAG_INFO << "Return content size:" << return_j.dump().size() << std::endl;;
+    std::cout << TAG_INFO << return_j["message"] << std::endl;
     
     retData(return_j.dump());
 
@@ -393,6 +394,7 @@ inline void myHttpServer::HttpServer::retData(std::string return_data_dump)
     if(send_size < 0){
         std::cerr << TAG_ERROR << "Send size:" << send_size << std::endl;
     }
+    
 }
 
 
