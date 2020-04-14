@@ -25,11 +25,11 @@ namespace myHttpServer{
     #define HEADER_RECV_BUFFER_SIZE 2048
     // 8KB
     #define SEND_BUFFER_SIZE (1024*8)
-    //64KB
+    //8KB
     #define CONTENT_RECV_BUFFER_SIZE (1024*8)
     //128KB
     // #define MULTI_ADD_TO_CONTENT (1024*128)
-    #define MULTI_ADD_TO_CONTENT (1024*1024*5)
+    #define MULTI_ADD_TO_CONTENT (1024*512)
 
 
     /* Outputing tag */
@@ -64,7 +64,7 @@ namespace myHttpServer{
         char httpHeader[HEADER_RECV_BUFFER_SIZE] ={0};
         const char* requestMethod;
         char router[NORMAL_BUFFER_SIZE] = {0};
-        char content[MULTI_ADD_TO_CONTENT] = {0};
+        
         char http_version[NORMAL_BUFFER_SIZE] = {0};
         int content_length;
         char connection[NORMAL_BUFFER_SIZE] = {0};
@@ -81,6 +81,7 @@ namespace myHttpServer{
         inline void SetTask(const char* router, const char* content);
         inline void retData(std::string return_data_dump);
         int httpMethod(const char* recvMessage, char* method);
+        int parseHeader(const char* recvMessage, int pos, char* content);
         int parseHeader(const char* recvMessage, int pos);
         void parseContent(const char* recvMessage);
         void upload_image(const char* content);

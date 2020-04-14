@@ -117,12 +117,12 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
         char method[4]={0};
         int pos = httpMethod(this->httpHeader, method);                
         this->requestMethod = method;
-
+        
 
         std:: cout << this->httpHeader <<std::endl;
         
         if(strcmp(this->requestMethod, "POST") == 0) //看是否是POST请求
-        { 
+        {             
             //parse httpheader
             /*
                 char router[NORMAL_BUFFER_SIZE] = {0};
@@ -131,10 +131,11 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                 char connection[NORMAL_BUFFER_SIZE] = {0};
             */
             parseHeader(this->httpHeader, pos);
+            
+            
             char tmp_content_buffer[CONTENT_RECV_BUFFER_SIZE]={0};
             char* temp_content = (char*)malloc(MULTI_ADD_TO_CONTENT);
             memset(temp_content, 0, MULTI_ADD_TO_CONTENT);
-
             if(content_length <= CONTENT_RECV_BUFFER_SIZE){
                 recv(this->clifd, temp_content, HEADER_RECV_BUFFER_SIZE, 0);
             }else
@@ -146,9 +147,9 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                     int recv_size;
                     if(i == total_times) 
                     {
-                        size_t last_buffer_size = (this->content_length  % CONTENT_RECV_BUFFER_SIZE);
+                        int last_buffer_size = (this->content_length  % CONTENT_RECV_BUFFER_SIZE);
                         char last_recv_buffer[last_buffer_size]={0};
-                        recv_size = recv(this->clifd, last_recv_buffer, last_buffer_size, 0);
+                        recv_size = recv(this->clifd, last_recv_buffer, last_buffer_size, 0);                        
                         strcat(temp_content, last_recv_buffer);
                     }else
                     {
@@ -157,17 +158,23 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                     }          
                     std::cout << TAG_INFO << "Current / Total: " << i << " / " << total_times 
                         << ", Recv Size: " << recv_size << " Byte(s)." << std::endl;                 
-                }                                       
+                }      
+                                                 
             }
-            strncpy(this->content, temp_content,MULTI_ADD_TO_CONTENT); 
-            std::cout << this ->content << std::endl;           
+            if (int(strlen(temp_content)) > this->content_length)
+            {
+                *(temp_content+(this->content_length)) = '\0';
+            }
+            
+            std::cout << temp_content <<std::endl;
+            SetTask(this->router, temp_content);
             free(temp_content);
-            SetTask(this->router, this->content);
         }            
         // std::cout<< recv_buffer <<std::endl;
         if(strcmp(this->requestMethod, "GET") == 0)//看是否是GET请求
         { 
-            /**/
+            // char* getContent;
+            // parseHeader(this->httpHeader, pos,getContent);
             // SetTask()
         }
     }
@@ -226,7 +233,7 @@ int myHttpServer::HttpServer::httpMethod(const char* recvMessage, char* method)
     return pos;
 }
 
-int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos)
+int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos, char* content)
 {
     /*
         提取router
@@ -299,9 +306,68 @@ int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos)
             pos++;
 
             if (pos >= message_size) break;
-        }
-        strncpy(this->content, recvMessage+pos, message_size-pos);
+        }        
+        strncpy(content, recvMessage+pos, message_size-pos);
     }
+
+    return pos;
+}
+
+int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos)
+{
+    /*
+        提取router
+    */
+    const char* c_router = recvMessage+pos+1;
+    for (;;pos++)
+    {
+        if(*(recvMessage+pos+1) == ' ') break;                
+    }            
+    
+    strncpy(this->router, c_router, pos-4); //把router提取出来                
+    // std::cout<< this->router <<std::endl;
+
+
+    /*
+        提取httpversion
+    */
+    int current_pos = pos+1;
+    for (;;)
+    {
+        if(*(recvMessage+pos-2) == '\r' && *(recvMessage+pos-1) == '\n') break;
+        pos++;
+    }
+    strncpy(this->http_version, recvMessage+current_pos+1, pos-current_pos-3);
+    // std::cout << this->http_version << std::endl;
+
+    
+    /*
+        提取 Content_Length
+    */
+    int pos_contLength = count(recvMessage, "Content-Length: ") + strlen("Content-Length: ");
+    int size_contLength=0;
+    for (;; )
+    {
+        if(*(recvMessage+pos_contLength+size_contLength+2) == '\n' && *(recvMessage+pos_contLength+size_contLength+1) == '\r') break;
+        size_contLength++;
+    }    
+    char contentLength[128] = {0};
+    strncpy(contentLength, recvMessage+pos_contLength, size_contLength+1);
+    this->content_length = atoi(contentLength);
+
+
+    /*
+        提取connection状态
+    */
+    int pos_connection = count(recvMessage, "Connection: ") + strlen("Connection: ");
+    int size_connection = 0;
+    for (;; )
+    {
+        if(*(recvMessage+pos_connection+size_connection+2) == '\n' && *(recvMessage+pos_connection+size_connection+1) == '\r') break;
+        size_connection++;
+    }   
+    strncpy(this->connection, recvMessage+pos_connection, size_connection+1);
+
 
     return pos;
 }
@@ -331,7 +397,7 @@ void myHttpServer::HttpServer::upload_image(const char* content)
         retData(return_j.dump());
         return ;
     }
-
+    std::cout << content << std::endl;           
     //Get the request json object
     nlohmann::json request_j = nlohmann::json::parse(content);  
     int nums = request_j["img_num"];
