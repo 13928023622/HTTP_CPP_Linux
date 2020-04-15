@@ -21,7 +21,7 @@
 
 myHttpServer::HttpServer::HttpServer()
 {
-    this->port = 8520;     
+    this->port = 8522;     
 }
 
 myHttpServer::HttpServer::HttpServer(const unsigned int port)
@@ -122,7 +122,7 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
         std:: cout << this->httpHeader <<std::endl;
         
         if(strcmp(this->requestMethod, "POST") == 0) //看是否是POST请求
-        {             
+        {                         
             //parse httpheader
             /*
                 char router[NORMAL_BUFFER_SIZE] = {0};
@@ -131,13 +131,31 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                 char connection[NORMAL_BUFFER_SIZE] = {0};
             */
             parseHeader(this->httpHeader, pos);
-            
-            
+
+
+            /*发送100响应*/
+            try{
+                nlohmann::json reponse_100;
+                reponse_100["status_code"]  = SEND_YOUR_CONTENT; 
+                reponse_100["message"]  = "'Start to send content!'";
+                // send(this->clifd, )
+                send(this->clifd, reponse_100.dump().c_str(), reponse_100.dump().size(),0);
+            }
+            catch (nlohmann::json::exception err) {
+                std::cerr << "[ERROR] exception id: " << err.id <<
+                            " message: " << err.what() << std::endl;
+            }            
+
+            sleep(2);
+
+            /*Start to receive content*/            
             char tmp_content_buffer[CONTENT_RECV_BUFFER_SIZE]={0};
-            char* temp_content = (char*)malloc(MULTI_ADD_TO_CONTENT);
-            memset(temp_content, 0, MULTI_ADD_TO_CONTENT);
+            char* content = (char*)malloc(MULTI_ADD_TO_CONTENT);
+            memset(content, 0, MULTI_ADD_TO_CONTENT);
+            // char content[MULTI_ADD_TO_CONTENT]={0};
+
             if(content_length <= CONTENT_RECV_BUFFER_SIZE){
-                recv(this->clifd, temp_content, HEADER_RECV_BUFFER_SIZE, 0);
+                recv(this->clifd, content, HEADER_RECV_BUFFER_SIZE, 0);
             }else
             {                
                 int total_times = (this->content_length / CONTENT_RECV_BUFFER_SIZE) + ((this->content_length  % CONTENT_RECV_BUFFER_SIZE > 0) ? 1 : 0);
@@ -149,26 +167,27 @@ void myHttpServer::HttpServer::ExtRoutAndContFromReqst()
                     {
                         int last_buffer_size = (this->content_length  % CONTENT_RECV_BUFFER_SIZE);
                         char last_recv_buffer[last_buffer_size]={0};
-                        recv_size = recv(this->clifd, last_recv_buffer, last_buffer_size, 0);                        
-                        strcat(temp_content, last_recv_buffer);
+                        recv_size = recv(this->clifd, last_recv_buffer, last_buffer_size, 0);  
+                        
+                        strncat(content, last_recv_buffer,last_buffer_size);
+                        // std::cout<< last_recv_buffer;
                     }else
                     {
                         recv_size = recv(this->clifd, tmp_content_buffer, CONTENT_RECV_BUFFER_SIZE, 0);
-                        strcat(temp_content, tmp_content_buffer);
+
+                        strncat(content, tmp_content_buffer,CONTENT_RECV_BUFFER_SIZE);
+                        // std::cout<< tmp_content_buffer;
                     }          
                     std::cout << TAG_INFO << "Current / Total: " << i << " / " << total_times 
                         << ", Recv Size: " << recv_size << " Byte(s)." << std::endl;                 
                 }      
                                                  
             }
-            if (int(strlen(temp_content)) > this->content_length)
-            {
-                *(temp_content+(this->content_length)) = '\0';
-            }
-            
-            std::cout << temp_content <<std::endl;
-            SetTask(this->router, temp_content);
-            free(temp_content);
+            std::cout<< "---------------------"<<std::endl;
+            std::cout << content <<std::endl;
+            std::cout<< "---------------------"<<std::endl;            
+            SetTask(this->router, content);
+            free(content);
         }            
         // std::cout<< recv_buffer <<std::endl;
         if(strcmp(this->requestMethod, "GET") == 0)//看是否是GET请求
@@ -233,85 +252,6 @@ int myHttpServer::HttpServer::httpMethod(const char* recvMessage, char* method)
     return pos;
 }
 
-int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos, char* content)
-{
-    /*
-        提取router
-    */
-    const char* c_router = recvMessage+pos+1;
-    for (;;pos++)
-    {
-        if(*(recvMessage+pos+1) == ' ') break;                
-    }            
-    
-    strncpy(this->router, c_router, pos-4); //把router提取出来                
-    // std::cout<< this->router <<std::endl;
-
-
-    /*
-        提取httpversion
-    */
-    int current_pos = pos+1;
-    for (;;)
-    {
-        if(*(recvMessage+pos-2) == '\r' && *(recvMessage+pos-1) == '\n') break;
-        pos++;
-    }
-    strncpy(this->http_version, recvMessage+current_pos+1, pos-current_pos-3);
-    // std::cout << this->http_version << std::endl;
-
-    
-    /*
-        提取 Content_Length
-    */
-    int pos_contLength = count(recvMessage, "Content-Length: ") + strlen("Content-Length: ");
-    int size_contLength=0;
-    for (;; )
-    {
-        if(*(recvMessage+pos_contLength+size_contLength+2) == '\n' && *(recvMessage+pos_contLength+size_contLength+1) == '\r') break;
-        size_contLength++;
-    }    
-    char contentLength[128] = {0};
-    strncpy(contentLength, recvMessage+pos_contLength, size_contLength+1);
-    this->content_length = atoi(contentLength);
-
-
-    /*
-        提取connection状态
-    */
-    int pos_connection = count(recvMessage, "Connection: ") + strlen("Connection: ");
-    int size_connection = 0;
-    for (;; )
-    {
-        if(*(recvMessage+pos_connection+size_connection+2) == '\n' && *(recvMessage+pos_connection+size_connection+1) == '\r') break;
-        size_connection++;
-    }   
-    strncpy(this->connection, recvMessage+pos_connection, size_connection+1);
-
-
-    /*
-        提取 content
-    */
-    if(strcmp(this->requestMethod, "GET")==0){
-        const std::string message = recvMessage;
-        int message_size = message.size();      
-        current_pos = pos;          
-        for(;;) { //直到遇到连续的四个字符 为 \r\n\r\n
-            if(message_size >= current_pos && 
-                *(recvMessage+pos-4) == '\r' && *(recvMessage+pos-3) == '\n' &&
-                *(recvMessage+pos-2) == '\r' && *(recvMessage+pos-1) == '\n') {
-                
-                break;
-            }
-            pos++;
-
-            if (pos >= message_size) break;
-        }        
-        strncpy(content, recvMessage+pos, message_size-pos);
-    }
-
-    return pos;
-}
 
 int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos)
 {
@@ -543,3 +483,84 @@ char* myHttpServer::HttpServer::random_uuid(char buf[37])
     *p = 0;
     return buf;
 }
+
+
+// int myHttpServer::HttpServer::parseHeader(const char* recvMessage, int pos, char* getMethod_content)
+// {
+//     /*
+//         提取router
+//     */
+//     const char* c_router = recvMessage+pos+1;
+//     for (;;pos++)
+//     {
+//         if(*(recvMessage+pos+1) == ' ') break;                
+//     }            
+    
+//     strncpy(this->router, c_router, pos-4); //把router提取出来                
+//     // std::cout<< this->router <<std::endl;
+
+
+//     /*
+//         提取httpversion
+//     */
+//     int current_pos = pos+1;
+//     for (;;)
+//     {
+//         if(*(recvMessage+pos-2) == '\r' && *(recvMessage+pos-1) == '\n') break;
+//         pos++;
+//     }
+//     strncpy(this->http_version, recvMessage+current_pos+1, pos-current_pos-3);
+//     // std::cout << this->http_version << std::endl;
+
+    
+//     /*
+//         提取 Content_Length
+//     */
+//     int pos_contLength = count(recvMessage, "Content-Length: ") + strlen("Content-Length: ");
+//     int size_contLength=0;
+//     for (;; )
+//     {
+//         if(*(recvMessage+pos_contLength+size_contLength+2) == '\n' && *(recvMessage+pos_contLength+size_contLength+1) == '\r') break;
+//         size_contLength++;
+//     }    
+//     char contentLength[128] = {0};
+//     strncpy(contentLength, recvMessage+pos_contLength, size_contLength+1);
+//     this->content_length = atoi(contentLength);
+
+
+//     /*
+//         提取connection状态
+//     */
+//     int pos_connection = count(recvMessage, "Connection: ") + strlen("Connection: ");
+//     int size_connection = 0;
+//     for (;; )
+//     {
+//         if(*(recvMessage+pos_connection+size_connection+2) == '\n' && *(recvMessage+pos_connection+size_connection+1) == '\r') break;
+//         size_connection++;
+//     }   
+//     strncpy(this->connection, recvMessage+pos_connection, size_connection+1);
+
+
+//     /*
+//         提取 content
+//     */
+//     if(strcmp(this->requestMethod, "GET")==0){
+//         const std::string message = recvMessage;
+//         int message_size = message.size();      
+//         current_pos = pos;          
+//         for(;;) { //直到遇到连续的四个字符 为 \r\n\r\n
+//             if(message_size >= current_pos && 
+//                 *(recvMessage+pos-4) == '\r' && *(recvMessage+pos-3) == '\n' &&
+//                 *(recvMessage+pos-2) == '\r' && *(recvMessage+pos-1) == '\n') {
+                
+//                 break;
+//             }
+//             pos++;
+
+//             if (pos >= message_size) break;
+//         }        
+//         strncpy(getMethod_content, recvMessage+pos, message_size-pos);
+//     }
+
+//     return pos;
+// }

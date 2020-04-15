@@ -22,7 +22,7 @@ namespace myHttpServer{
     // 1KB
     #define NORMAL_BUFFER_SIZE 1024
     // 2KB
-    #define HEADER_RECV_BUFFER_SIZE 2048
+    #define HEADER_RECV_BUFFER_SIZE 1024
     // 8KB
     #define SEND_BUFFER_SIZE (1024*8)
     //8KB
@@ -46,6 +46,7 @@ namespace myHttpServer{
     #define THE_PAGE_IS_NOT_FOUND 5001
     #define JSON_DATA_IS_NULL 5002
     #define IMG_NUM_IS_ZERO 5003
+    #define SEND_YOUR_CONTENT 5100
 
     class HttpServer{
     public:
@@ -63,30 +64,34 @@ namespace myHttpServer{
 
         char httpHeader[HEADER_RECV_BUFFER_SIZE] ={0};
         const char* requestMethod;
-        char router[NORMAL_BUFFER_SIZE] = {0};
-        
+        char router[NORMAL_BUFFER_SIZE] = {0};        
         char http_version[NORMAL_BUFFER_SIZE] = {0};
         int content_length;
         char connection[NORMAL_BUFFER_SIZE] = {0};
 
         unsigned int port;
 
+        /*status*/
         bool isInit = false;
         bool isBind = false;
         bool isListen = false;
         bool isConByCli = false;
 
+        /*http*/
         int sock_accept(const unsigned int lisfd);
         void close_socket();
         inline void SetTask(const char* router, const char* content);
         inline void retData(std::string return_data_dump);
         int httpMethod(const char* recvMessage, char* method);
-        int parseHeader(const char* recvMessage, int pos, char* content);
+        // int parseHeader(const char* recvMessage, int pos, char* getMethod_content);
         int parseHeader(const char* recvMessage, int pos);
         void parseContent(const char* recvMessage);
-        void upload_image(const char* content);
-        void base64ToImage(const std::string &b64_str, cv::Mat &result_img);
 
+        /*tasks*/
+        void upload_image(const char* content);
+
+        /*tool*/
+        void base64ToImage(const std::string &b64_str, cv::Mat &result_img);
         int lenth(const char *pstr);
         int count(const char *p1,const char *p2);
         char *random_uuid(char buf[37]);
