@@ -26,8 +26,10 @@ namespace gz_ag {
     #define SEND_BEFORE_CONNECTED 4002
     #define SEND_DATA_BEFORE_SEND_REQUEST_HEADER 4003
     #define SEND_REQUEST_HEADER_FAILED 4004
+    
     #define IMAGE_EMPTY 5001
     #define MALLOC_ERROR 5002
+    #define REQUEST_DENIED 5500
 
     class HttpConnector {
         public:

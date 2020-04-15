@@ -139,6 +139,7 @@ void gz_ag::HttpConnector::send_json(const std::string& json_data, char** path_o
         exit(SEND_DATA_BEFORE_SEND_REQUEST_HEADER);
     }
 
+
     if ( data_size < SEND_BUFFER_SIZE) { //在发送data,size小于send_buffer_size
         send_size = send(this->socket_fd, json_data.c_str(), data_size, 0);
         std::cout << TAG_INFO << "Send Size: " << send_size << " Byte(s)." << std::endl;
@@ -318,6 +319,25 @@ void gz_ag::HttpConnector::send_json_v2(const std::string& json_data, nlohmann::
 
     std::cout<< json_data.c_str() << std::endl;
     
+    char continue_reponse[NORMAL_BUFFER_SIZE]={0};
+    recv(this->socket_fd, continue_reponse, NORMAL_BUFFER_SIZE,0);
+    try{
+
+        
+        nlohmann::json continue_eponse_json = nlohmann::json::parse(continue_reponse);
+        int continue_eponse_status_code = continue_eponse_json["status_code"];
+        if(continue_eponse_status_code != 5100){
+            std::cerr << TAG_ERROR << "Request denied!" <<std::endl;
+            exit(REQUEST_DENIED);
+        }
+    }
+    catch (nlohmann::json::exception err){
+        std::cerr << "[ERROR] exception id: " << err.id <<
+                    " message: " << err.what() << std::endl;
+    } 
+    
+
+
     if ( data_size < SEND_BUFFER_SIZE) { //在发送data,size小于send_buffer_size
         send_size = send(this->socket_fd, json_data.c_str(), data_size, 0);
         std::cout << TAG_INFO << "Send Size: " << send_size << " Byte(s)." << std::endl;
