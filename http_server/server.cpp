@@ -4,7 +4,6 @@ using namespace std;
 
 int main() {
     myHttpServer::HttpServer server(8522);
-    server.HttpInit();
-    server.ExtRoutAndContFromReqst();
+    server.ServerRun();
     return 0;
 }

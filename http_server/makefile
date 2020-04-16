@@ -1,5 +1,5 @@
 TARGET = server
-FLAG = -Wall -std=c++11
+FLAG = -Wall -std=c++11 -lpthread
 BASE64 = base64
 
 OPENCV_VERSION = 3
@@ -13,9 +13,9 @@ OPENCV2_HEADER = -I/usr/include/opencv2
 
 
 
-
-$(TARGET): $(TARGET).o httpserver.o $(BASE64).o
-	g++ -o $(TARGET) $(TARGET).o httpserver.o  $(BASE64).o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
+ThreadPool = ./threadpool
+$(TARGET): $(TARGET).o httpserver.o $(BASE64).o $(ThreadPool)/Thread.o
+	g++ -o $(TARGET) $(TARGET).o httpserver.o  $(ThreadPool)/Thread.o $(BASE64).o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
 
 $(TARGET).o:$(TARGET).cpp 
 	g++ -c $(TARGET).cpp  $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
@@ -26,6 +26,9 @@ httpserver.o:httpserver.cpp
 $(BASE64).o: $(BASE64).cpp
 	g++ -c $(BASE64).cpp $(FLAG)
 
+Thread.o:$(ThreadPool)/Thread.cpp 
+	g++ -c $(ThreadPool)/Thread.cpp  $(FLAG)
 
+.PHONY : clean
 clean:
-	rm *.o
+	-rm *.o

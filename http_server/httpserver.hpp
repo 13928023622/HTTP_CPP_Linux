@@ -11,6 +11,10 @@
 #include <netinet/in.h>  //对应于windows下的winsock2
 #include <arpa/inet.h>
 
+
+/* thread pool */
+#include "threadpool/Thread.h"
+
 namespace myHttpServer{
 
     #define MAX_LISTEN 20
@@ -48,26 +52,25 @@ namespace myHttpServer{
     #define IMG_NUM_IS_ZERO 5003
     #define SEND_YOUR_CONTENT 5100
 
-    class HttpServer{
+    class HttpServer:public CTask{
     public:
-        HttpServer();
+        // HttpServer();
         HttpServer(const unsigned int port=8522);
         ~HttpServer();
 
-        int HttpInit();    
-        // void HttpRequest();
-        void ExtRoutAndContFromReqst();
+        void ServerRun();
+
         
 
     private:
         int socket_fd, clifd;
 
-        char httpHeader[HEADER_RECV_BUFFER_SIZE] ={0};
-        const char* requestMethod;
-        char router[NORMAL_BUFFER_SIZE] = {0};        
-        char http_version[NORMAL_BUFFER_SIZE] = {0};
-        int content_length;
-        char connection[NORMAL_BUFFER_SIZE] = {0};
+        
+
+        // char router[NORMAL_BUFFER_SIZE] = {0};        
+        // char http_version[NORMAL_BUFFER_SIZE] = {0};
+        // int content_length;
+        // char connection[NORMAL_BUFFER_SIZE] = {0};
 
         unsigned int port;
 
@@ -78,17 +81,22 @@ namespace myHttpServer{
         bool isConByCli = false;
 
         /*http*/
+        int HttpInit();    
+        // void HttpRequest();
+        void ExecReqst();
+        void Run();
+
         int sock_accept(const unsigned int lisfd);
         void close_socket();
-        inline void SetTask(const char* router, const char* content);
-        inline void retData(std::string return_data_dump);
+        inline void SetTask(const char* router, const char* content, int cur_clifd, const char* requestMethod, const char* connection);
+        inline void retData(std::string return_data_dump, int cur_clifd);
         int httpMethod(const char* recvMessage, char* method);
         // int parseHeader(const char* recvMessage, int pos, char* getMethod_content);
-        int parseHeader(const char* recvMessage, int pos);
+        int parseHeader(const char* recvMessage, int pos, char* router, char* http_version, int& content_length, char* connection);
         void parseContent(const char* recvMessage);
 
         /*tasks*/
-        void upload_image(const char* content);
+        void upload_image(const char* content, int cur_clifd);
 
         /*tool*/
         void base64ToImage(const std::string &b64_str, cv::Mat &result_img);
