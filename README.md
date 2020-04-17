@@ -1,4 +1,4 @@
-# HTTP_server_client_c-
+# HTTP_server_client_c++
 
 使用常规的网络编程函数写了个简单的Server端和Client端，用到的网络编程函数有：
 
