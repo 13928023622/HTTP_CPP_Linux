@@ -1,6 +1,8 @@
 TARGET = server
 FLAG = -Wall -std=c++11 -lpthread
 BASE64 = base64
+SUB_DIRS = ./threadpool
+
 
 OPENCV_VERSION = 3
 
@@ -24,9 +26,10 @@ httpserver.o:httpserver.cpp
 $(BASE64).o: $(BASE64).cpp
 	g++ -c $(BASE64).cpp $(FLAG)
 
-# +$(MAKE) -C threadpool
-# Thread.o: ./threadpool/Thread.cpp 
-# 	g++ -c ./threadpool/Thread.cpp -std=c++11 
+export FLAG
+Thread.o: $(SUB_DIRS)/Thread.cpp
+	g++ -c $(SUB_DIRS)/Thread.cpp $(FLAG)
+
 
 .PHONY : clean
 clean:
