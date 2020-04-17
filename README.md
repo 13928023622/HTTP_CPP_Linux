@@ -1,4 +1,4 @@
-# HTTP_server_client_c++
+# 从零开始编写HTTP客户端和服务端，方便大家了解原理
 
 使用常规的网络编程函数写了个简单的Server端和Client端，用到的网络编程函数有：
 
