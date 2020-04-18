@@ -14,8 +14,8 @@ endif
 OPENCV2_HEADER = -I/usr/include/opencv2
 
 
-$(TARGET): $(TARGET).o httpserver.o $(BASE64).o Thread.o
-	g++ -o $(TARGET) $(TARGET).o httpserver.o  Thread.o $(BASE64).o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
+$(TARGET): $(TARGET).o httpserver.o $(BASE64).o myThreadPool.o
+	g++ -o $(TARGET) $(TARGET).o httpserver.o  myThreadPool.o $(BASE64).o $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
 
 $(TARGET).o:$(TARGET).cpp 
 	g++ -c $(TARGET).cpp  $(FLAG)  $(OPENCV2_HEADER) $(OPENCV2_DEPENDENCY) 
@@ -27,8 +27,8 @@ $(BASE64).o: $(BASE64).cpp
 	g++ -c $(BASE64).cpp $(FLAG)
 
 export FLAG
-Thread.o: $(SUB_DIRS)/Thread.cpp
-	g++ -c $(SUB_DIRS)/Thread.cpp $(FLAG)
+myThreadPool.o: $(SUB_DIRS)/myThreadPool.cpp
+	g++ -c $(SUB_DIRS)/myThreadPool.cpp $(FLAG)
 
 
 .PHONY : clean
