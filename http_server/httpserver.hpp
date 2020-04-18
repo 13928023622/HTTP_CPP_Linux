@@ -13,7 +13,7 @@
 
 
 /* thread pool */
-#include "threadpool/Thread.h"
+#include "threadpool/myThreadPool.h"
 
 namespace myHttpServer{
 
@@ -52,7 +52,7 @@ namespace myHttpServer{
     #define IMG_NUM_IS_ZERO 5003
     #define SEND_YOUR_CONTENT 5100
 
-    class HttpServer:public CTask{
+    class HttpServer:public myTask{
     public:
         // HttpServer();
         HttpServer(const unsigned int port=8522);
@@ -84,7 +84,7 @@ namespace myHttpServer{
         int HttpInit();    
         // void HttpRequest();
         void ExecReqst();
-        void Run();
+        void RunTask();
 
         int sock_accept(const unsigned int lisfd);
         void close_socket();

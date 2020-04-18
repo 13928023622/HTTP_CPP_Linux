@@ -1,7 +1,3 @@
-/*
-  Author: Mephis Chen
-  Date: 2020-04-17
-*/
 #include"httpserver.hpp"
 
 /* standard library */
@@ -36,6 +32,7 @@ myHttpServer::HttpServer::HttpServer(const unsigned int port)
 
 myHttpServer::HttpServer::~HttpServer(){
     close_socket();
+
 }
 
 void myHttpServer::HttpServer::close_socket(){
@@ -121,25 +118,30 @@ void myHttpServer::HttpServer::ExecReqst()
     }
 
     /*创建线程池*/
-    CThreadPool Pool(3);
+    myThreadPool Pool(3);
     while (1)
     {
+        /* 获得 连接套接字connectfd  */
         int connectfd = sock_accept(this->socket_fd);         
-        CTask* task = new HttpServer;
-        task->SetConnFd(connectfd);
-        Pool.AddTask(task);
+        /* 创建task基类对象指针，该指针指向子类HttpServer */
+        myTask* task = new HttpServer; 
+        /* 将connectfd存入task对象中 */
+        task->SetConnectFd(connectfd);
+        Pool.AddTaskList(task);
     }
 }
 
 /*
+    //对CTask中纯虚函数Run的重写
     1.查看是post还是get
     2.解析httpheader其中的信息
     3.若是post，则server端发送100响应给client端，要求client端发送接下来的数据content
     4.recv得到数据主体content，使用nlohmann进行解析，进一步得到json对象
     5.执行httpheader中对应的router的函数
 */
-void myHttpServer::HttpServer::Run(){
-    int connectfd = GetConnFd();
+void myHttpServer::HttpServer::RunTask(){    
+    /* 因为Run函数是继承与父类CTask的函数，所以该函数可以调用CTask中的所有public成员 */
+    int connectfd = GetConnectFd();
 
     char httpHeader[HEADER_RECV_BUFFER_SIZE] ={0};
     recv(connectfd, httpHeader, HEADER_RECV_BUFFER_SIZE, 0);
@@ -160,7 +162,7 @@ void myHttpServer::HttpServer::Run(){
         int content_length;
         char connection[NORMAL_BUFFER_SIZE] = {0};
         parseHeader(httpHeader, pos, router, http_version, content_length, connection);
-        std::cout << "CL:" << content_length <<std::endl;
+        // std::cout << "CL:" << content_length <<std::endl;
 
 
         /*发送100响应*/
@@ -214,7 +216,7 @@ void myHttpServer::HttpServer::Run(){
                                                 
         }
         std::cout<< "---------------------"<<std::endl;
-        sleep(15);
+        sleep(10);
         // std::cout << content <<std::endl;
         std::cout<< "---------------------"<<std::endl;            
         SetTask(router, content, connectfd, requestMethod, connection);
