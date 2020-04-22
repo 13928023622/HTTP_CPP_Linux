@@ -111,16 +111,7 @@ void myHttpServer::HttpServer::sock_accept()
         int iRet_connetct_fd = accept(this->socket_fd, &clientAddr, &size);
         if(iRet_connetct_fd > -1) {
             this->clifds[(this->cli_nums)++] = iRet_connetct_fd;        
-        }
-        // for (int i = 0; i < FD_SETSIZE; i++)
-        // {        
-        //     if(this->clifds[i] < 0) 
-        //     {
-        //         this->clifds[i] = iRet_connetct_fd;
-        //         this->cli_nums++;
-        //     }
-        // }
-        
+        }      
     }
 }
 
@@ -157,7 +148,7 @@ void myHttpServer::HttpServer::ExecReqst()
     int max_fd = this->socket_fd;
     FD_SET(this->socket_fd, &this->allSet);
     FD_ZERO(&this->allSet);
-    // this->cli_nums = 0;
+    this->cli_nums = 0;
     while (1)
     {        
         rset = this->allSet;    
@@ -179,7 +170,7 @@ void myHttpServer::HttpServer::ExecReqst()
                     if(this->clifds[j] == -1) 
                     {
                         this->clifds[j] = iRet_connetct_fd;
-                        // this->cli_nums++;
+                        this->cli_nums++;
                         break;
                     }
                         
@@ -188,6 +179,11 @@ void myHttpServer::HttpServer::ExecReqst()
                 break;
             
         }
+        if(this->cli_nums == FD_SETSIZE){
+            std::cerr << TAG_ERROR << " Too many clients!" <<std::endl;
+            exit(TOO_MANY_CLIENTS);
+        }
+
         /* 加入client的fd */
         max_fd = 0;
         for (int i = 0; i < FD_SETSIZE; i++)
@@ -210,14 +206,12 @@ void myHttpServer::HttpServer::ExecReqst()
                     /* 执行相应clifd的任务 */
                     RunTask(this->clifds[i]);
                     /* 完事，从fd_set中删除相应的clifd */
-                    FD_CLR(this->clifds[i], &this->allSet);      
+                    FD_CLR(this->clifds[i], &this->allSet); 
+                    this->cli_nums--;     
                     this->clifds[i]  = -1;                                 
                 }        
             }
         }
-
-
-        
     }
 }
 
