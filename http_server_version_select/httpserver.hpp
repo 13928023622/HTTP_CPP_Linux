@@ -44,7 +44,7 @@ namespace myHttpServer{
     #define TAG_WARNING "[WARNING] "
 
     /* ERROR CODE */
-
+    #define TOO_MANY_CLIENTS 5005
     #define SOCKET_INIALIZE_ERROR 5401
     #define SEND_BEFORE_CONNECTED 5402
     #define SEND_DATA_BEFORE_SEND_REQUEST_HEADER 5403

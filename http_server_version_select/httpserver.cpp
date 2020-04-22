@@ -112,6 +112,15 @@ void myHttpServer::HttpServer::sock_accept()
         if(iRet_connetct_fd > -1) {
             this->clifds[(this->cli_nums)++] = iRet_connetct_fd;        
         }
+        // for (int i = 0; i < FD_SETSIZE; i++)
+        // {        
+        //     if(this->clifds[i] < 0) 
+        //     {
+        //         this->clifds[i] = iRet_connetct_fd;
+        //         this->cli_nums++;
+        //     }
+        // }
+        
     }
 }
 
@@ -135,7 +144,7 @@ void myHttpServer::HttpServer::ExecReqst()
     /* 初始化客户池 */
     for (int i = 0; i < FD_SETSIZE; i++)
     {
-        this->clifds[i]=0;
+        this->clifds[i]=-1;
     }
     
 
@@ -144,9 +153,18 @@ void myHttpServer::HttpServer::ExecReqst()
     // pthread_detach(conn_thread_id);
     
 
-
+    fd_set rset;
+    int max_fd = this->socket_fd;
+    FD_SET(this->socket_fd, &this->allSet);
+    FD_ZERO(&this->allSet);
+    // this->cli_nums = 0;
     while (1)
     {        
+        rset = this->allSet;    
+        /* 设置超时 */
+        struct timeval timeout={2,0};  
+        int retval = select(max_fd+1,&rset,NULL,NULL,&timeout);
+
         /* 获取clifd */
         for(int i = 0 ;i < FD_SETSIZE;i++)
         {
@@ -154,46 +172,52 @@ void myHttpServer::HttpServer::ExecReqst()
             socklen_t size = sizeof(struct sockaddr);
             memset((char *)&clientAddr, 0, sizeof(struct sockaddr));
             int iRet_connetct_fd = accept(this->socket_fd, &clientAddr, &size);
-            if(iRet_connetct_fd > -1) {
-                this->clifds[(this->cli_nums)++] = iRet_connetct_fd;        
-            }            
+            if(iRet_connetct_fd > 0)
+            {
+                for (int j = 0; j < FD_SETSIZE; j++)
+                {
+                    if(this->clifds[j] == -1) 
+                    {
+                        this->clifds[j] = iRet_connetct_fd;
+                        // this->cli_nums++;
+                        break;
+                    }
+                        
+                }                
+            }else
+                break;
+            
         }
-
-        /* 初始化fd_set */    
-        FD_ZERO(&this->allSet);
-        int max_fd = this->socket_fd;
-        /* 加入server的fd */
-        FD_SET(this->socket_fd,&this->allSet);
-
         /* 加入client的fd */
-        int client_nums = this->cli_nums;
-        for (int i = 0; i < client_nums; i++)
+        max_fd = 0;
+        for (int i = 0; i < FD_SETSIZE; i++)
         {
-            max_fd = clifds[i]>max_fd?clifds[i]:max_fd;
+            if(clifds[i]<0) continue;
+            max_fd = clifds[i]>max_fd?clifds[i]:max_fd; //下一轮中的maxfd
             if(this->clifds[i] > 0 && !FD_ISSET(this->clifds[i], &this->allSet))
                 FD_SET(clifds[i],&this->allSet);
         }
 
-        /* 设置超时 */
-        struct timeval timeout={3,0};
-        int retval = select(max_fd+1,&this->allSet,NULL,NULL,&timeout);
+
         if (retval == -1) std::cerr<< TAG_ERROR << "select failed! " << errno << " clinums:" << this->cli_nums <<std::endl;
         else if(retval == 0) { /* 超时 */ }
         else{ 
             std::cout << "client in"<<std::endl;
-            int i;
-            int nums = this->cli_nums;
-            for (i = 0; i < nums; i++)
+            int i;            
+            for (i = 0; i < FD_SETSIZE; i++)
             {
-                if(FD_ISSET(clifds[i], &this->allSet)){
+                if(FD_ISSET(this->clifds[i], &rset)){
                     /* 执行相应clifd的任务 */
-                    RunTask(clifds[i]);
+                    RunTask(this->clifds[i]);
                     /* 完事，从fd_set中删除相应的clifd */
-                    FD_CLR(clifds[i], &this->allSet);                                        
+                    FD_CLR(this->clifds[i], &this->allSet);      
+                    this->clifds[i]  = -1;                                 
                 }        
             }
-            this->cli_nums = 0;
         }
+
+
+        
     }
 }
 
